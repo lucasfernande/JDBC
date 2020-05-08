@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import db.DB;
+import db.DbException;
 
 public class Program {
 
@@ -15,17 +16,24 @@ public class Program {
 		try {
 			
              conn = DB.getConnection();
+             
+             conn.setAutoCommit(false); // com esse método, todas as operações não serão confirmadas automaticamente, 
+                                        // dependendo de uma confirmação explícita do programador
+             
              ps = conn.createStatement();
              
              int rows1 = ps.executeUpdate("UPDATE seller SET BaseSalary = 2090 WHERE DepartmentId = 1");
 	         
+             /*
              int x = 1;
              if (x < 2) {
             	 throw new SQLException("Fake error"); // simulando um erro
              }
+             */
              
              int rows2 = ps.executeUpdate("UPDATE seller SET BaseSalary = 3090 WHERE DepartmentId = 2");
              
+             conn.commit(); // somente aqui a transação será confirmada
              
              System.out.println("Rows 1: " + rows1);
              System.out.println("Rows 2: " + rows2);
@@ -33,7 +41,12 @@ public class Program {
 
              
 		} catch (SQLException e) {
-			e.printStackTrace();
+			try {
+				conn.rollback(); // o rollback() volta para o banco de dados antes da transação
+				throw new DbException("Transaction rolled back! Caused by: " + e.getMessage());
+			} catch (SQLException e1) {
+				throw new DbException("Error trying to rollback! Caused by: " + e1.getMessage());
+			}
 		} finally {
 			DB.closeStatement(ps);
 			DB.closeConnection();
